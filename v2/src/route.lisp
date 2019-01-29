@@ -15,7 +15,10 @@
            :route
            :*parsed-parameters-symbol-name*))
 (in-package :caveman2.route)
-
+;; 展开成ningle需要的路由模式
+;; 如果routing-rule是个list那么就把这个list展开
+;; 如果是个字符串，就封装成list
+;; 保证是`(list "/a/b" "/a/c")或`(list "/a/b")这两种模式
 (defun add-app-if-omitted (routing-rule)
   (if (or (and (listp routing-rule)
                (stringp (car routing-rule)))
@@ -68,16 +71,16 @@
                (and (symbolp p)
                     (string= *parsed-parameters-symbol-name* p)))
              lambda-list))
-
+;; 定义route宏
 (defmacro defroute (&rest args)
   (let ((params (gensym "PARAMS")))
-    (typecase (car args)
-      (symbol
-       (destructuring-bind (name routing-rule lambda-list &rest body) args
+    (typecase (car args) ;; 查看第一个元素的类型
+      (symbol ;; 如果是symbol，那么需要绑定路由名字
+       (destructuring-bind (name routing-rule lambda-list &rest body) args ;
          `(prog1
               ,(multiple-value-bind (body declarations documentation)
                    (alexandria:parse-body body :documentation t)
-                 `(defun ,name (,params)
+                 `(defun ,name (,params) ;;定义一个命名函数
                     (declare (ignorable ,params))
                     ,@(if documentation (list documentation))
                     ,@(if lambda-list
@@ -94,9 +97,9 @@
             (setf (apply #'ningle:route
                          (append
                           ,(add-app-if-omitted routing-rule)
-                          (list :identifier ',name)))
+                          (list :identifier ',name))) ;;添加到ningle:route上
                   (function ,name)))))
-      (list  (destructuring-bind (routing-rule lambda-list &rest body) args
+      (list  (destructuring-bind (routing-rule lambda-list &rest body) args ;; 如果第一个元素类型是list,则是个未命名的路由
                (multiple-value-bind (body declarations documentation)
                     (alexandria:parse-body body :documentation t)
                   `(setf (apply #'ningle:route
@@ -122,7 +125,7 @@
     (list (mapcar #'canonicalize-method method))
     (keyword method)
     (symbol (intern (symbol-name method) :keyword))))
-
+;;定义route注解
 (defannotation route (method routing-rule form)
     (:arity 3)
   (let* ((params (gensym "PARAMS"))

@@ -46,33 +46,15 @@
 (defclass <app> (ningle:<app>) ())
 
 (defvar *package-app-map* (make-hash-table :test 'eq))
-
+;; app初始化后设置app的实例到当前包名下
 (defmethod initialize-instance :after ((app <app>) &key)
   (setf (gethash *package* *package-app-map*) app))
 
-(defun find-package-app (package)
-  (gethash package *package-app-map*))
+(defun find-package-app (package))
 
 (defmethod call ((this <app>) env)
   (declare (ignore env))
-  (let ((*current-app* this))
-    (handler-case (call-next-method)
-      (http-exception (c)
-        (let ((code (exception-code c)))
-          (setf (response-status *response*) code)
-          (or (on-exception this c)
-              (princ-to-string c))))
-      (caveman-exception (c)
-        (let ((code (exception-code c)))
-          (setf (response-status *response*) code)
-          (or (on-exception this code)
-              (princ-to-string c))))
-      (caveman-redirection (c)
-        (let ((to (redirection-to c))
-              (code (redirection-code c)))
-          (setf (getf (response-headers *response*) :location) to)
-          (setf (response-status *response*) code)
-          to)))))
+  (let ((*current-app* this))))
 
 (defmethod not-found ((this <app>))
   (throw-code 404))
